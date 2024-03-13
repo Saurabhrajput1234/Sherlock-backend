@@ -26,10 +26,10 @@ const upload = multer({ storage: storage });
 // Endpoint for storing files
 router.post("/filedata", upload.single('file'), async (req, res) => {
 
-  const { name } = req.body;
+  const { name,textdata } = req.body;
   const file = req.file;
 
-  if (!name || !file) { // Check if name or file is missing
+  if (!name || !file || !textdata) { // Check if name or file is missing
     return res.status(422).json({ error: "Fill all fields" });
   }
 
@@ -46,6 +46,7 @@ router.post("/filedata", upload.single('file'), async (req, res) => {
     // Create new document with Cloudinary URL
     const finalData = new filedb({
       name,
+      textdata,
       file: cloudinaryResponse.secure_url // Store Cloudinary URL
     });
 
