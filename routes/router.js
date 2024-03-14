@@ -64,4 +64,25 @@ router.post("/filedata", upload.single('file'), async (req, res) => {
   }
 });
 
+router.get("/filedata/:name", async (req, res) => {
+  const name = req.params.name;
+  console.log(name);
+
+  try {
+    // Find document by name
+    const data = await filedb.findOne({ name });
+
+    if (!data) {
+      return res.status(404).json({ error: "Data not found" });
+    }
+
+    // Respond with data
+    return res.status(200).json(data);
+  } catch (error) {
+    // Handle errors
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;
