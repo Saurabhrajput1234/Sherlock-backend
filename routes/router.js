@@ -25,52 +25,33 @@ const upload = multer({ storage: storage });
 
 // Endpoint for storing files
 router.post("/filedata", upload.single('file'), async (req, res) => {
-
-  const { name,textdata } = req.body;
+  const { textdata } = req.body;
   const file = req.file;
 
-  if (!name || !file || !textdata) { // Check if name or file is missing
-    return res.status(422).json({ error: "Fill all fields" });
+  if (!file && !textdata) {
+    return res.status(422).json({ error: "Fill at least one field" });
   }
 
   try {
-    // Check if the name already exists
-    const prename = await filedb.findOne({ name });
-    if (prename) {
-      return res.status(422).json({ error: "This name already exists" });
+    if (file) {
+      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
+      req.body.file = cloudinaryResponse.secure_url;
     }
 
-    // Upload file to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-
-    // Create new document with Cloudinary URL
-    const finalData = new filedb({
-      name,
-      textdata,
-      file: cloudinaryResponse.secure_url // Store Cloudinary URL
-    });
-
-    // Save data to the database
-    console.log(finalData)
-    await finalData.save();
-    console.log(finalData)
-
-    // Respond with success message
-    return res.status(200).json({ message: "Data saved successfully" });
+    const savedData = await filedb.create(req.body);
+    res.status(200).json({ data: savedData });
   } catch (error) {
-    // Handle errors
     console.error("Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/filedata/:name", async (req, res) => {
-  const name = req.params.name;
-  console.log(name);
+router.get("/filedata/:id", async (req, res) => {
+  const id = req.params.id; // Get the id from request parameters
 
   try {
-    // Find document by name
-    const data = await filedb.findOne({ name });
+    // Find document by _id
+    const data = await filedb.findById(id);
 
     if (!data) {
       return res.status(404).json({ error: "Data not found" });

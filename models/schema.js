@@ -1,13 +1,8 @@
 const mongoose = require("mongoose");
 
 const schema = new mongoose.Schema({
-
-  name: { type:String,uppercase:true,requires:true,trim:true},
-  textdata:{type:String,requires:true},
-  
-  file: {type:String,required:true}
-
-
+  textdata: { type: String, required: false }, // Changed 'requires' to 'required'
+  file: { type: String, required: false }
 });
 
 const filedb = mongoose.model("filedatas", schema);
