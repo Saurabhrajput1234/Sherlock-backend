@@ -64,7 +64,7 @@ router.get("/filedata/:id", async (req, res) => {
   } catch (error) {
     // Handle errors
     console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error1111" });
   }
 });
 
@@ -104,7 +104,7 @@ router.post("/update/filedata/:id", async (req, res) => {
   } catch (error) {
     // Handle any errors
     console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error222222" });
   }
 });
 
