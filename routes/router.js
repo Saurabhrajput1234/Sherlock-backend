@@ -28,11 +28,11 @@ router.post("/filedata", upload.single('file'), async (req, res) => {
   const { textdata } = req.body;
   const file = req.file;
 
-  if (!file && !textdata) {
-    return res.status(422).json({ error: "Fill at least one field" });
-  }
-
   try {
+    if (!file && !textdata) {
+      return res.status(422).json({ error: "Fill at least one field" });
+    }
+
     if (file) {
       const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
       req.body.file = cloudinaryResponse.secure_url;
@@ -61,6 +61,46 @@ router.get("/filedata/:id", async (req, res) => {
     return res.status(200).json(data);
   } catch (error) {
     // Handle errors
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Endpoint for updating data by ID
+router.post("/update/filedata/:id", async (req, res) => {
+  const id = req.params.id; // Get the id from request parameters
+  console.log(req.body)
+  const { resultdata } = req.body;
+
+  try {
+    // Check if id is provided
+    if (!id) {
+      return res.status(422).json({ error: "ID is required" });
+    }
+
+    // Check if resultdata is provided
+    if (!resultdata) {
+      return res.status(422).json({ error: "Resultdata is required for update" });
+    }
+
+    // Find existing data by id
+    let existingData = await filedb.findById(id);
+
+    // If data with the given id doesn't exist, return 404 error
+    if (!existingData) {
+      return res.status(404).json({ error: "Data not found" });
+    }
+
+    // Update the resultdata field
+    existingData.resultdata = resultdata;
+
+    // Save the updated data
+    const savedData = await existingData.save();
+
+    // Respond with the updated data
+    return res.status(200).json({ data: savedData });
+  } catch (error) {
+    // Handle any errors
     console.error("Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
