@@ -28,11 +28,13 @@ router.post("/filedata", upload.single('file'), async (req, res) => {
   const { textdata } = req.body;
   const file = req.file;
 
-  try {
-    if (!file && !textdata) {
-      return res.status(422).json({ error: "Fill at least one field" });
-    }
+  if (!file && !textdata) {
+    return res.status(422).json({ error: "Fill at least one field" });
+  }
 
+
+  try {
+    
     if (file) {
       const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
       req.body.file = cloudinaryResponse.secure_url;
