@@ -26,34 +26,40 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Endpoint for storing files
-router.post("/filedata", upload.single('file'), async (req, res) => {
+router.post('/filedata', upload.single('file'), async (req, res) => {
   const { textdata } = req.body;
   const file = req.file;
- 
+  const userId = req.body.userId; // Assuming userId is sent in the request body
 
   try {
     // Check if at least one field is filled
     if (!file && !textdata) {
-      return res.status(422).json({ error: "Fill at least one field" });
+      return res.status(422).json({ error: 'Fill at least one field' });
     }
 
-   // Upload file to Cloudinary if exists
-   let filePairData = {};
-   if (file) {
-     const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-     filePairData.file = cloudinaryResponse.secure_url; // Save file URL
-   }
-   if (textdata) {
-     filePairData.textdata = textdata; // Save text data
-   }
+    // Upload file to Cloudinary if exists
+    let filePairData = {};
+    if (file) {
+      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
+      filePairData.file = cloudinaryResponse.secure_url; // Save file URL
+    }
+    if (textdata) {
+      filePairData.textdata = textdata; // Save text data
+    }
 
-   // Create a new file pair instance
-   const filePair = new FilePairModel({ filePairs: [filePairData] });
-   const savedData = await filePair.save();
-    res.status(200).json({ data: savedData });
+    // Find the user by userId and update their filePairs array
+    const user = await FilePairModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.filePairs.push(filePairData); // Push the new filePairData into the filePairs array
+    await user.save(); // Save the updated user document
+
+    res.status(200).json({ message: 'File pair saved successfully' });
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error('Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -171,7 +177,7 @@ router.post("/update/resultdata/:id", async (req, res) => {
 
 // authentication
 
-router.post("/register", upload.single('file'), async (req, res) => {
+router.post("/register", async (req, res) => {
   const { firstName, lastName, email, password, confirmPassword, role } = req.body;
   
 
@@ -256,17 +262,17 @@ router.post("/login",async(req,res)=>{
    }
  });
 
-//  // user valid
-//  router.get("/validuser",authenticate,async(req,res)=>{
-//  try{
-//   const validUserOne = await FilePairModel.findOne({_id:req.userId});
-//   res.status(201).json({status:201,validUserOne});
-//  } catch (error){
-//   res.status(401).json({status:401,error});
+ // user valid
+ router.get("/validuser",authenticate,async(req,res)=>{
+ try{
+  const validUserOne = await FilePairModel.findOne({_id:req.userId});
+  res.status(201).json({status:201,validUserOne});
+ } catch (error){
+  res.status(401).json({status:401,error});
 
-//  }
+ }
 
-//  })
+ })
 
 
 module.exports = router;

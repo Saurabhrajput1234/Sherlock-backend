@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const FilePairModel = require("../models/userSchema");
 
-const keysecret = "mynameissaurabhrajputifyouveanytyuplkbhkhbkbkjbkknkjjkbjk"
+const keysecret = "mynameissaurabhrajputifyouhaveanytyuplkbhkhbkbkjbkknkjjkbjk";
 
 const authenticate = async(req,res,next)=>{
   try{
