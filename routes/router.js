@@ -130,10 +130,11 @@ router.get("/filedata/:id", async (req, res) => {
 });
 
 /// Endpoint for appending resultdata by ID
-router.post("/update/resultdata/:id", async (req, res) => {
+// Endpoint for appending resultdata by ID
+router.post("/update/resultdata/:id", upload.single('file'), async (req, res) => {
   const id = req.params.id; // Get the id from request parameters
-  const { resultdata } = req.body; // Get the resultdata from the request body
-  console.log('Received resultdata:', resultdata); // Log the resultdata received from the frontend
+  const file = req.file; // Get the file from the request
+  console.log('Received file:', file); // Log the file received from the frontend
 
   try {
     // Check if id is provided
@@ -153,12 +154,19 @@ router.post("/update/resultdata/:id", async (req, res) => {
     // Find the index of the file pair in the array
     const index = filePair.filePairs.findIndex(pair => pair.id.toString() === id);
 
-    // Append resultdata to the file pair
-    filePair.filePairs[index].resultdata = resultdata;
+    // Upload file to Cloudinary if exists
+    let fileURL = null;
+    if (file) {
+      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
+      fileURL = cloudinaryResponse.secure_url; // Save file URL
+    }
+
+    // Append resultdata (fileURL) to the file pair
+    filePair.filePairs[index].resultdata = fileURL;
 
     // Save the updated file pair
-     const updatedData = await filePair.save();
-     console.log(updatedData)
+    const updatedData = await filePair.save();
+    console.log(updatedData)
 
     // Respond with success message
     return res.status(200).json({ success: true });
@@ -168,6 +176,7 @@ router.post("/update/resultdata/:id", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 
