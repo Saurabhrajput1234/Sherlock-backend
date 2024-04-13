@@ -26,25 +26,41 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Endpoint for storing files
-router.post('/filedata', upload.single('file'), async (req, res) => {
-  const { textdata } = req.body;
-  const file = req.file;
+router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }]), async (req, res) => {
+  const { entity } = req.body;
+  const files = req.files;
   const userId = req.body.userId; // Assuming userId is sent in the request body
 
   try {
     // Check if at least one field is filled
-    if (!file && !textdata) {
+    if (!files['file'] && !entity && !files['resultdata']) {
       return res.status(422).json({ error: 'Fill at least one field' });
     }
 
-    // Upload file to Cloudinary if exists
+    // Initialize filePairData object
     let filePairData = {};
-    if (file) {
-      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-      filePairData.file = cloudinaryResponse.secure_url; // Save file URL
+
+    // If 'file' field exists, upload file to Cloudinary and save URL
+    if (files['file']) {
+      const cloudinaryFileResponse = await cloudinary.uploader.upload(files['file'][0].path);
+      filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
+    } else {
+      filePairData.inputFile = null; // Store null if 'file' field is not provided
     }
-    if (textdata) {
-      filePairData.textdata = textdata; // Save text data
+
+    // If 'resultdata' field exists, upload file to Cloudinary and save URL
+    if (files['resultdata']) {
+      const cloudinaryResultDataResponse = await cloudinary.uploader.upload(files['resultdata'][0].path);
+      filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
+    } else {
+      filePairData.resultdata = null; // Store null if 'resultdata' field is not provided
+    }
+
+    // If 'entity' field exists, save its value
+    if (entity) {
+      filePairData.entity = entity; // Save text data
+    } else {
+      filePairData.entity = null; // Store null if 'entity' field is not provided
     }
 
     // Find the user by userId and update their filePairs array
@@ -62,6 +78,8 @@ router.post('/filedata', upload.single('file'), async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
 
 // Endpoint for updating data by ID
 router.post("/update/filedata/:id", upload.single('file'), async (req, res) => {
@@ -130,12 +148,12 @@ router.get("/filedata/:id", async (req, res) => {
 });
 
 /// Endpoint for appending resultdata by ID
-// Endpoint for appending resultdata by ID
-router.post("/update/resultdata/:id", upload.single('file'), async (req, res) => {
+// Endpoint for updating data by ID
+router.post("/update/filepair/:id", upload.fields([{ name: 'inputFile' }, { name: 'resultdata' }]), async (req, res) => {
   const id = req.params.id; // Get the id from request parameters
-  const file = req.file; // Get the file from the request
-  console.log('Received file:', file); // Log the file received from the frontend
-
+  const { entity } = req.body;
+  const files = req.files;
+   console.log (req.body)
   try {
     // Check if id is provided
     if (!id) {
@@ -143,41 +161,42 @@ router.post("/update/resultdata/:id", upload.single('file'), async (req, res) =>
     }
 
     // Find the file pair containing the matching ID
-    const filePair = await FilePairModel.findOne({ "filePairs.id": id });
-    
-
+    const filePair = await FilePairModel.findOne({ "filePairs._id": id });
+    console.log(filePair)
     // If file pair with the given id doesn't exist, return 404 error
     if (!filePair) {
       return res.status(404).json({ error: "File pair not found" });
     }
 
     // Find the index of the file pair in the array
-    const index = filePair.filePairs.findIndex(pair => pair.id.toString() === id);
+    const index = filePair.filePairs.findIndex(pair => pair._id.toString() === id);
 
-    // Upload file to Cloudinary if exists
-    let fileURL = null;
-    if (file) {
-      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-      fileURL = cloudinaryResponse.secure_url; // Save file URL
+    // Update the file pair with the new values
+    if (entity) {
+      filePair.filePairs[index].entity = entity;
     }
-
-    // Append resultdata (fileURL) to the file pair
-    filePair.filePairs[index].resultdata = fileURL;
+    if (files['inputFile']) {
+      // Upload input file to Cloudinary if exists
+      const cloudinaryResponse = await cloudinary.uploader.upload(files['inputFile'][0].path);
+      filePair.filePairs[index].inputFile = cloudinaryResponse.secure_url;
+    }
+    if (files['resultdata']) {
+      // Upload result data file to Cloudinary if exists
+      const cloudinaryResponse = await cloudinary.uploader.upload(files['resultdata'][0].path);
+      filePair.filePairs[index].resultdata = cloudinaryResponse.secure_url;
+    }
 
     // Save the updated file pair
     const updatedData = await filePair.save();
-    console.log(updatedData)
 
     // Respond with success message
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, updatedData });
   } catch (error) {
     // Handle any errors
     console.error("Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
 
 
 
