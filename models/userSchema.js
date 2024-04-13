@@ -15,7 +15,7 @@ const filePairSchema = new mongoose.Schema({
 
 // Define main schema
 const userSchema = new mongoose.Schema({
-  name: { type: String, uppercase: true, required: true },
+  firstName: { type: String, uppercase: true, required: true },
   lastName: { type: String, uppercase: true, required: true },
   email: {
     type: String,
@@ -28,8 +28,7 @@ const userSchema = new mongoose.Schema({
     },
   },
   password: { type: String, required: true, minlength: 6 },
-  cPassword: { type: String, required: true, minlength: 6 },
-  file: { type: String }, // New field to store file path
+  confirmPassword: { type: String, required: true, minlength: 6 },
   role: { type: String, enum: ['police', 'nopolice'] }, // Role-based authentication
   tokens: [
     {
@@ -46,7 +45,7 @@ const userSchema = new mongoose.Schema({
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 12);
-    this.cPassword = await bcrypt.hash(this.cPassword, 12);
+    this.confirmPassword = await bcrypt.hash(this.confirmPassword, 12);
   }
   next();
 });

@@ -172,10 +172,10 @@ router.post("/update/resultdata/:id", async (req, res) => {
 // authentication
 
 router.post("/register", upload.single('file'), async (req, res) => {
-  const { name, lastName, email, password, cPassword, role } = req.body;
-  const file = req.file; // Uploaded file details
+  const { firstName, lastName, email, password, confirmPassword, role } = req.body;
+  
 
-  if (!name || !lastName || !email || !password || !cPassword || !role) {
+  if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
     return res.status(422).json({ error: "Fill all details" });
   }
 
@@ -187,21 +187,20 @@ router.post("/register", upload.single('file'), async (req, res) => {
     }
 
     // Check if password and confirm password match
-    if (password !== cPassword) {
+    if (password !== confirmPassword) {
       return res.status(422).json({ error: "Password and confirm password do not match" });
     }
 
     // Upload file to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
+   
 
     // Create new user document with Cloudinary URL
     const finalUser = new FilePairModel({
-      name,
+      firstName,
       lastName,
       email,
       password,
-      cPassword,
-      file: cloudinaryResponse.secure_url, // Store Cloudinary URL
+      confirmPassword, // Store Cloudinary URL
       role // Set role
     });
 
