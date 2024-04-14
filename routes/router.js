@@ -77,10 +77,14 @@ router.post(
         return res.status(404).json({ error: "User not found" });
       }
 
+      
+      const filePair = user.filePairs.create(filePairData);
+
       user.filePairs.push(filePairData);
       await user.save();
+      
 
-      res.status(200).json({ message: "File pair saved successfully" });
+      res.status(200).json({ message: "File pair saved successfully" ,filePairId: filePair._id });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ error: "Internal server error" });
