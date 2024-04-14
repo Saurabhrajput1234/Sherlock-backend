@@ -29,7 +29,7 @@ router.post(
   "/filedata",
   upload.fields([{ name: "file" }, { name: "resultdata" }]),
   async (req, res) => {
-    const { entity, status ,filePairId} = req.body;
+    const { entity, status ,filePairId,sharedFileEmailsData} = req.body;
     const files = req.files;
     const userId = req.body.userId;
 
@@ -71,6 +71,11 @@ router.post(
       } else {
         filePairData.entity = null;
       }
+      if (sharedFileEmailsData) {
+        filePairData.sharedFileEmailsData = sharedFileEmailsData;
+      } else {
+        filePairData.sharedFileEmailsData = null;
+      }
       if (status) {
         filePairData.status = status;
       } else {
@@ -101,10 +106,10 @@ router.post(
 //filepair data
 router.post(
   "/update/filepair/:filePairId",
-  upload.fields([{ name: "inputFile" }, { name: "resultdata" }]),
+  upload.fields([{ name: "inputFile" }, { name: "resultdata" },{ name: "sharedFile" }]),
   async (req, res) => {
     const filePairId = req.params.filePairId; 
-    const { entity, status } = req.body;
+    const { entity, status,sharedFileEmail } = req.body;
     const files = req.files;
     
     try {
@@ -130,6 +135,10 @@ router.post(
       if (status) {
         filePair.status = status;
       }
+
+      if (sharedFileEmail) {
+        filePair.sharedFileEmailsData.push(sharedFileEmail); 
+      }
       
       // Handle file uploads if provided
       if (files["inputFile"]) {
@@ -138,6 +147,14 @@ router.post(
           { resource_type: "raw" }
         );
         filePair.inputFile = cloudinaryResponse.secure_url;
+      }
+
+      if (files["sharedFile"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["sharedFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.sharedFile = cloudinaryResponse.secure_url;
       }
       if (files["resultdata"]) {
         const cloudinaryResponse = await cloudinary.uploader.upload(
@@ -273,12 +290,13 @@ router.get("/finduser/:email", async (req, res) => {
 
 
 
+
 // Endpoint for storing files shareFile
 router.post(
   "/shareFile",
-  upload.fields([{ name: "file" }, { name: "resultdata" },{ name: "sharedFile" }]), 
+  upload.fields([{ name: "file" }, { name: "resultdata" }, { name: "sharedFile" }]), 
   async (req, res) => {
-    const { entity, status, filePairId, email } = req.body; 
+    const { entity, status, filePairId, email, fileFromId } = req.body; 
     const files = req.files; // Uploaded files
 
     try {
@@ -289,7 +307,6 @@ router.post(
 
       let filePairData = {}; 
 
-      
       if (files["file"]) {
         const cloudinaryFileResponse = await cloudinary.uploader.upload(
           files["file"][0].path,
@@ -299,12 +316,17 @@ router.post(
       } else {
         filePairData.inputFile = null;
       }
+      
       if (files["sharedFile"]) {
-        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+        const cloudinarySharedFileResponse = await cloudinary.uploader.upload(
           files["sharedFile"][0].path,
           { resource_type: "raw" }
         );
-        filePairData.sharedFile = cloudinaryFileResponse.secure_url; 
+        filePairData.sharedFile = {
+          fileFromId: fileFromId, // Corrected to access from files["sharedFile"]
+          fileName: cloudinarySharedFileResponse.original_filename, // Store the original filename
+          fileUrl: cloudinarySharedFileResponse.secure_url // Store the secure URL
+        }; 
       } else {
         filePairData.sharedFile = null;
       }
@@ -319,18 +341,15 @@ router.post(
         filePairData.resultdata = null; 
       }
 
-      
       if (filePairId) {
         filePairData.filePairId = filePairId;
       } else {
         console.log("File Pair ID is required");
       }
 
-      
       filePairData.entity = entity || null;
       filePairData.status = status || null;
 
-      
       const user = await FilePairModel.findOne({ email });
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -345,7 +364,6 @@ router.post(
       // Save the updated user document
       await user.save();
 
-      
       res.status(200).json({ message: "File pair saved successfully", filePair: filePair });
     } catch (error) {
       console.error("Error:", error);
