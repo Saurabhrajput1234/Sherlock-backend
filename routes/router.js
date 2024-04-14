@@ -29,7 +29,7 @@ router.post(
   "/filedata",
   upload.fields([{ name: "file" }, { name: "resultdata" }]),
   async (req, res) => {
-    const { entity, status } = req.body;
+    const { entity, status ,filePairId} = req.body;
     const files = req.files;
     const userId = req.body.userId;
 
@@ -60,8 +60,14 @@ router.post(
         filePairData.resultdata = null; // Store null if 'resultdata' field is not provided
       }
 
-      // If 'entity' field exists, save its value
-      if (entity) {
+     
+      if (filePairId) {
+        filePairData.filePairId = filePairId;
+      } else {
+        console.log ("require");
+      }
+       // If 'entity' field exists, save its value
+       if (entity) {
         filePairData.entity = entity;
       } else {
         filePairData.entity = null;
@@ -83,8 +89,9 @@ router.post(
       user.filePairs.push(filePairData);
       await user.save();
       
+      
 
-      res.status(200).json({ message: "File pair saved successfully" ,filePairId: filePair._id });
+      res.status(200).json({ message: "File pair saved successfully" ,filePair: filePair });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ error: "Internal server error" });
@@ -94,59 +101,64 @@ router.post(
 
 //filepair data
 router.post(
-  "/update/filepair/:id",
+  "/update/filepair/:filePairId",
   upload.fields([{ name: "inputFile" }, { name: "resultdata" }]),
   async (req, res) => {
-    const id = req.params.id; 
+    const filePairId = req.params.filePairId; 
     const { entity, status } = req.body;
     const files = req.files;
-    console.log(req.body);
+    
     try {
-      if (!id) {
-        return res.status(422).json({ error: "ID is required" });
+      if (!filePairId) {
+        return res.status(422).json({ error: "File Pair ID is required" });
       }
 
-      const filePair = await FilePairModel.findOne({ "filePairs._id": id });
-      console.log(filePair);
+      const user = await FilePairModel.findOne({ "filePairs.filePairId": filePairId });
+      if (!user) {
+        return res.status(404).json({ error: "File pair not found" });
+      }
 
+      // Find the file pair within the user's filePairs array
+      const filePair = user.filePairs.find(pair => pair.filePairId === filePairId);
       if (!filePair) {
         return res.status(404).json({ error: "File pair not found" });
       }
 
-      const index = filePair.filePairs.findIndex(
-        (pair) => pair._id.toString() === id
-      );
-
+      // Update entity and status if provided
       if (entity) {
-        filePair.filePairs[index].entity = entity;
+        filePair.entity = entity;
       }
       if (status) {
-        filePair.filePairs[index].status = status;
+        filePair.status = status;
       }
+      
+      // Handle file uploads if provided
       if (files["inputFile"]) {
         const cloudinaryResponse = await cloudinary.uploader.upload(
           files["inputFile"][0].path,
           { resource_type: "raw" }
         );
-        filePair.filePairs[index].inputFile = cloudinaryResponse.secure_url;
+        filePair.inputFile = cloudinaryResponse.secure_url;
       }
       if (files["resultdata"]) {
         const cloudinaryResponse = await cloudinary.uploader.upload(
           files["resultdata"][0].path,
           { resource_type: "raw" }
         );
-        filePair.filePairs[index].resultdata = cloudinaryResponse.secure_url;
+        filePair.resultdata = cloudinaryResponse.secure_url;
       }
 
-      const updatedData = await filePair.save();
+      // Save the updated user document
+      await user.save();
 
-      return res.status(200).json({ success: true, updatedData });
+      return res.status(200).json({ success: true, updatedData: filePair });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
 );
+
 
 // authentication
 
@@ -241,5 +253,66 @@ router.get("/validuser", authenticate, async (req, res) => {
     res.status(401).json({ status: 401, error });
   }
 });
+
+
+
+// router.get("/finduser/:email", async (req, res) => {
+//   const email = req.params.email;
+
+//   try {
+//     const user = await FilePairModel.findOne({ email: email });
+//     if (!user) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+
+//     res.status(200).json({ user });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+// router.post("/addsharedfile", async (req, res) => {
+//   try {
+//     console.log(req.body); // Log the request body to check the received data
+    
+//     const { email, sharedFileName } = req.body;
+
+//     // Check if the email and shared file name are provided
+//     if (!email || !sharedFileName) {
+//       return res.status(422).json({ error: "Email and shared file name are required" });
+//     }
+
+//     // Find the user by email
+//     const user = await FilePairModel.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+
+//     // Create file pair data
+//     const filePairData = {
+//       entity: null, // You can set this as per your requirements
+//       inputFile: null, // Initially, inputFile is null
+//       resultdata: null, // Initially, resultdata is null
+//       status: null, // Initially, status is null
+//       sharedFile: sharedFileName // Set the shared file name
+//     };
+
+//     // Create a new file pair
+//     const filePair = user.filePairs.create(filePairData);
+
+//     // Push the new file pair to the user's filePairs array
+//     user.filePairs.push(filePair);
+
+//     // Save the updated user document
+//     await user.save();
+
+//     res.status(200).json({ message: "Shared file added successfully", filePairId: filePair._id });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
 
 module.exports = router;

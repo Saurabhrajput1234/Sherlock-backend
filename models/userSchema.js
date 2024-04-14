@@ -5,13 +5,15 @@ const jwt = require("jsonwebtoken");
 
 const keysecret = "mynameissaurabhrajputifyouhaveanytyuplkbhkhbkbkjbkknkjjkbjk";
 
-// Define sub-schema for the file pair
+// Define schema for the file pair
 const filePairSchema = new mongoose.Schema({
   id: { type: mongoose.Schema.Types.ObjectId, required: true, default: mongoose.Types.ObjectId },
+  filePairId: { type: String, required: false, unique: true },
   entity: { type: String, required: false },
   inputFile: { type: String, required: false },
-  resultdata: { type: String, required: false } ,
-  status:{type:String,required:false},
+  resultdata: { type: String, required: false },
+  status: { type: String, required: false },
+  sharedFile: { type: String, required: false } // New property to store shared file name
 });
 
 // Define main schema
