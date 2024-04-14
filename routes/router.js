@@ -27,7 +27,7 @@ const upload = multer({ storage: storage });
 
 // Endpoint for storing files
 router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }]), async (req, res) => {
-  const { entity } = req.body;
+  const { entity,status } = req.body;
   const files = req.files;
   const userId = req.body.userId; // Assuming userId is sent in the request body
 
@@ -42,7 +42,7 @@ router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }
 
     // If 'file' field exists, upload file to Cloudinary and save URL
     if (files['file']) {
-      const cloudinaryFileResponse = await cloudinary.uploader.upload(files['file'][0].path);
+      const cloudinaryFileResponse = await cloudinary.uploader.upload(files['file'][0].path,{resource_type:'raw'});
       filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
     } else {
       filePairData.inputFile = null; // Store null if 'file' field is not provided
@@ -50,7 +50,7 @@ router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }
 
     // If 'resultdata' field exists, upload file to Cloudinary and save URL
     if (files['resultdata']) {
-      const cloudinaryResultDataResponse = await cloudinary.uploader.upload(files['resultdata'][0].path);
+      const cloudinaryResultDataResponse = await cloudinary.uploader.upload(files['resultdata'][0].path ,{resource_type:'raw'});
       filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
     } else {
       filePairData.resultdata = null; // Store null if 'resultdata' field is not provided
@@ -61,6 +61,11 @@ router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }
       filePairData.entity = entity; // Save text data
     } else {
       filePairData.entity = null; // Store null if 'entity' field is not provided
+    }
+    if (status) {
+      filePairData.status = status; 
+    } else {
+      filePairData.status = null; 
     }
 
     // Find the user by userId and update their filePairs array
@@ -81,77 +86,77 @@ router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }
 
 
 
-// Endpoint for updating data by ID
-router.post("/update/filedata/:id", upload.single('file'), async (req, res) => {
-  const id = req.params.id; // Get the id from request parameters
-  const { textdata } = req.body;
-  const file = req.file;
+// // Endpoint for updating data by ID
+// router.post("/update/filedata/:id", upload.single('file'), async (req, res) => {
+//   const id = req.params.id; // Get the id from request parameters
+//   const { textdata } = req.body;
+//   const file = req.file;
 
-  try {
-    // Check if id is provided
-    if (!id) {
-      return res.status(422).json({ error: "ID is required" });
-    }
+//   try {
+//     // Check if id is provided
+//     if (!id) {
+//       return res.status(422).json({ error: "ID is required" });
+//     }
 
-    // Find existing data by id
-    let existingData = await FilePairModel.findById(id);
+//     // Find existing data by id
+//     let existingData = await FilePairModel.findById(id);
 
-    // If data with the given id doesn't exist, return 404 error
-    if (!existingData) {
-      return res.status(404).json({ error: "Data not found" });
-    }
+//     // If data with the given id doesn't exist, return 404 error
+//     if (!existingData) {
+//       return res.status(404).json({ error: "Data not found" });
+//     }
 
-    // Create a new file pair instance
-    let filePairData = {};
-    if (file) {
-      const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-      filePairData.file = cloudinaryResponse.secure_url; // Save file URL
-    }
-    if (textdata) {
-      filePairData.textdata = textdata; // Save text data
-    }
+//     // Create a new file pair instance
+//     let filePairData = {};
+//     if (file) {
+//       const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
+//       filePairData.file = cloudinaryResponse.secure_url; // Save file URL
+//     }
+//     if (textdata) {
+//       filePairData.textdata = textdata; // Save text data
+//     }
 
-    // Append the new file pair to existing file pairs
-    existingData.filePairs.push(filePairData);
+//     // Append the new file pair to existing file pairs
+//     existingData.filePairs.push(filePairData);
 
-    // Save the updated data
-    await existingData.save();
+//     // Save the updated data
+//     await existingData.save();
 
-    // Respond with success message
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    // Handle any errors
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+//     // Respond with success message
+//     return res.status(200).json({ success: true });
+//   } catch (error) {
+//     // Handle any errors
+//     console.error("Error:", error);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
 
 // Endpoint for getting data by ID
-router.get("/filedata/:id", async (req, res) => {
-  const id = req.params.id; // Get the id from request parameters
+// router.get("/filedata/:id", async (req, res) => {
+//   const id = req.params.id; // Get the id from request parameters
 
-  try {
-    // Find document by _id
-    const data = await FilePairModel.findById(id);
+//   try {
+//     // Find document by _id
+//     const data = await FilePairModel.findById(id);
 
-    if (!data) {
-      return res.status(404).json({ error: "Data not found" });
-    }
+//     if (!data) {
+//       return res.status(404).json({ error: "Data not found" });
+//     }
 
-    // Respond with data
-    return res.status(200).json(data);
-  } catch (error) {
-    // Handle errors
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+//     // Respond with data
+//     return res.status(200).json(data);
+//   } catch (error) {
+//     // Handle errors
+//     console.error("Error:", error);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
 
 /// Endpoint for appending resultdata by ID
 // Endpoint for updating data by ID
 router.post("/update/filepair/:id", upload.fields([{ name: 'inputFile' }, { name: 'resultdata' }]), async (req, res) => {
   const id = req.params.id; // Get the id from request parameters
-  const { entity } = req.body;
+  const { entity,status } = req.body;
   const files = req.files;
    console.log (req.body)
   try {
@@ -174,6 +179,9 @@ router.post("/update/filepair/:id", upload.fields([{ name: 'inputFile' }, { name
     // Update the file pair with the new values
     if (entity) {
       filePair.filePairs[index].entity = entity;
+    }
+    if (status) {
+      filePair.filePairs[index].status = status;
     }
     if (files['inputFile']) {
       // Upload input file to Cloudinary if exists
@@ -209,7 +217,7 @@ router.post("/register", async (req, res) => {
   const { firstName, lastName, email, password, confirmPassword, role } = req.body;
   
 
-  if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {
+  if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {kmm
     return res.status(422).json({ error: "Fill all details" });
   }
 

@@ -10,7 +10,8 @@ const filePairSchema = new mongoose.Schema({
   id: { type: mongoose.Schema.Types.ObjectId, required: true, default: mongoose.Types.ObjectId },
   entity: { type: String, required: false },
   inputFile: { type: String, required: false },
-  resultdata: { type: String, required: false } 
+  resultdata: { type: String, required: false } ,
+  status:{type:String,required:false},
 });
 
 // Define main schema
