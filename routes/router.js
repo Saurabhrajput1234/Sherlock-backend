@@ -8,307 +8,234 @@ const bcrypt = require("bcryptjs");
 
 // Configure Cloudinary with your credentials
 cloudinary.config({
-  cloud_name: 'dcnblai32',
-  api_key: '322754248918634',
-  api_secret: 'hPd5b4MA8UToPXSpFgZ4BUAFYcc'
+  cloud_name: "dcnblai32",
+  api_key: "322754248918634",
+  api_secret: "hPd5b4MA8UToPXSpFgZ4BUAFYcc",
 });
 
-// Multer storage configurationf
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Destination folder for storing uploaded files
+    cb(null, "uploads/");
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname); // Use original file name
-  }
+    cb(null, file.originalname);
+  },
 });
 
 const upload = multer({ storage: storage });
 
 // Endpoint for storing files
-router.post('/filedata', upload.fields([{ name: 'file' }, { name: 'resultdata' }]), async (req, res) => {
-  const { entity,status } = req.body;
-  const files = req.files;
-  const userId = req.body.userId; // Assuming userId is sent in the request body
+router.post(
+  "/filedata",
+  upload.fields([{ name: "file" }, { name: "resultdata" }]),
+  async (req, res) => {
+    const { entity, status } = req.body;
+    const files = req.files;
+    const userId = req.body.userId;
 
-  try {
-    // Check if at least one field is filled
-    if (!files['file'] && !entity && !files['resultdata']) {
-      return res.status(422).json({ error: 'Fill at least one field' });
+    try {
+      if (!files["file"] && !entity && !files["resultdata"]) {
+        return res.status(422).json({ error: "Fill at least one field" });
+      }
+
+      let filePairData = {};
+
+      if (files["file"]) {
+        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+          files["file"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
+      } else {
+        filePairData.inputFile = null;
+      }
+
+      if (files["resultdata"]) {
+        const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
+      } else {
+        filePairData.resultdata = null; // Store null if 'resultdata' field is not provided
+      }
+
+      // If 'entity' field exists, save its value
+      if (entity) {
+        filePairData.entity = entity;
+      } else {
+        filePairData.entity = null;
+      }
+      if (status) {
+        filePairData.status = status;
+      } else {
+        filePairData.status = null;
+      }
+
+      const user = await FilePairModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      user.filePairs.push(filePairData);
+      await user.save();
+
+      res.status(200).json({ message: "File pair saved successfully" });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
-
-    // Initialize filePairData object
-    let filePairData = {};
-
-    // If 'file' field exists, upload file to Cloudinary and save URL
-    if (files['file']) {
-      const cloudinaryFileResponse = await cloudinary.uploader.upload(files['file'][0].path,{resource_type:'raw'});
-      filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
-    } else {
-      filePairData.inputFile = null; // Store null if 'file' field is not provided
-    }
-
-    // If 'resultdata' field exists, upload file to Cloudinary and save URL
-    if (files['resultdata']) {
-      const cloudinaryResultDataResponse = await cloudinary.uploader.upload(files['resultdata'][0].path ,{resource_type:'raw'});
-      filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
-    } else {
-      filePairData.resultdata = null; // Store null if 'resultdata' field is not provided
-    }
-
-    // If 'entity' field exists, save its value
-    if (entity) {
-      filePairData.entity = entity; // Save text data
-    } else {
-      filePairData.entity = null; // Store null if 'entity' field is not provided
-    }
-    if (status) {
-      filePairData.status = status; 
-    } else {
-      filePairData.status = null; 
-    }
-
-    // Find the user by userId and update their filePairs array
-    const user = await FilePairModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    user.filePairs.push(filePairData); // Push the new filePairData into the filePairs array
-    await user.save(); // Save the updated user document
-
-    res.status(200).json({ message: 'File pair saved successfully' });
-  } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
   }
-});
+);
 
+//filepair data
+router.post(
+  "/update/filepair/:id",
+  upload.fields([{ name: "inputFile" }, { name: "resultdata" }]),
+  async (req, res) => {
+    const id = req.params.id; 
+    const { entity, status } = req.body;
+    const files = req.files;
+    console.log(req.body);
+    try {
+      if (!id) {
+        return res.status(422).json({ error: "ID is required" });
+      }
 
+      const filePair = await FilePairModel.findOne({ "filePairs._id": id });
+      console.log(filePair);
 
-// // Endpoint for updating data by ID
-// router.post("/update/filedata/:id", upload.single('file'), async (req, res) => {
-//   const id = req.params.id; // Get the id from request parameters
-//   const { textdata } = req.body;
-//   const file = req.file;
+      if (!filePair) {
+        return res.status(404).json({ error: "File pair not found" });
+      }
 
-//   try {
-//     // Check if id is provided
-//     if (!id) {
-//       return res.status(422).json({ error: "ID is required" });
-//     }
+      const index = filePair.filePairs.findIndex(
+        (pair) => pair._id.toString() === id
+      );
 
-//     // Find existing data by id
-//     let existingData = await FilePairModel.findById(id);
+      if (entity) {
+        filePair.filePairs[index].entity = entity;
+      }
+      if (status) {
+        filePair.filePairs[index].status = status;
+      }
+      if (files["inputFile"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["inputFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.filePairs[index].inputFile = cloudinaryResponse.secure_url;
+      }
+      if (files["resultdata"]) {
+        const cloudinaryResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePair.filePairs[index].resultdata = cloudinaryResponse.secure_url;
+      }
 
-//     // If data with the given id doesn't exist, return 404 error
-//     if (!existingData) {
-//       return res.status(404).json({ error: "Data not found" });
-//     }
+      const updatedData = await filePair.save();
 
-//     // Create a new file pair instance
-//     let filePairData = {};
-//     if (file) {
-//       const cloudinaryResponse = await cloudinary.uploader.upload(file.path);
-//       filePairData.file = cloudinaryResponse.secure_url; // Save file URL
-//     }
-//     if (textdata) {
-//       filePairData.textdata = textdata; // Save text data
-//     }
-
-//     // Append the new file pair to existing file pairs
-//     existingData.filePairs.push(filePairData);
-
-//     // Save the updated data
-//     await existingData.save();
-
-//     // Respond with success message
-//     return res.status(200).json({ success: true });
-//   } catch (error) {
-//     // Handle any errors
-//     console.error("Error:", error);
-//     return res.status(500).json({ error: "Internal server error" });
-//   }
-// });
-
-// Endpoint for getting data by ID
-// router.get("/filedata/:id", async (req, res) => {
-//   const id = req.params.id; // Get the id from request parameters
-
-//   try {
-//     // Find document by _id
-//     const data = await FilePairModel.findById(id);
-
-//     if (!data) {
-//       return res.status(404).json({ error: "Data not found" });
-//     }
-
-//     // Respond with data
-//     return res.status(200).json(data);
-//   } catch (error) {
-//     // Handle errors
-//     console.error("Error:", error);
-//     return res.status(500).json({ error: "Internal server error" });
-//   }
-// });
-
-/// Endpoint for appending resultdata by ID
-// Endpoint for updating data by ID
-router.post("/update/filepair/:id", upload.fields([{ name: 'inputFile' }, { name: 'resultdata' }]), async (req, res) => {
-  const id = req.params.id; // Get the id from request parameters
-  const { entity,status } = req.body;
-  const files = req.files;
-   console.log (req.body)
-  try {
-    // Check if id is provided
-    if (!id) {
-      return res.status(422).json({ error: "ID is required" });
+      return res.status(200).json({ success: true, updatedData });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
-
-    // Find the file pair containing the matching ID
-    const filePair = await FilePairModel.findOne({ "filePairs._id": id });
-    console.log(filePair)
-    // If file pair with the given id doesn't exist, return 404 error
-    if (!filePair) {
-      return res.status(404).json({ error: "File pair not found" });
-    }
-
-    // Find the index of the file pair in the array
-    const index = filePair.filePairs.findIndex(pair => pair._id.toString() === id);
-
-    // Update the file pair with the new values
-    if (entity) {
-      filePair.filePairs[index].entity = entity;
-    }
-    if (status) {
-      filePair.filePairs[index].status = status;
-    }
-    if (files['inputFile']) {
-      // Upload input file to Cloudinary if exists
-      const cloudinaryResponse = await cloudinary.uploader.upload(files['inputFile'][0].path);
-      filePair.filePairs[index].inputFile = cloudinaryResponse.secure_url;
-    }
-    if (files['resultdata']) {
-      // Upload result data file to Cloudinary if exists
-      const cloudinaryResponse = await cloudinary.uploader.upload(files['resultdata'][0].path);
-      filePair.filePairs[index].resultdata = cloudinaryResponse.secure_url;
-    }
-
-    // Save the updated file pair
-    const updatedData = await filePair.save();
-
-    // Respond with success message
-    return res.status(200).json({ success: true, updatedData });
-  } catch (error) {
-    // Handle any errors
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
   }
-});
-
-
-
-//authentication
-
+);
 
 // authentication
 
 router.post("/register", async (req, res) => {
-  const { firstName, lastName, email, password, confirmPassword, role } = req.body;
-  
+  const { firstName, lastName, email, password, confirmPassword, role } =
+    req.body;
 
-  if (!firstName || !lastName || !email || !password || !confirmPassword || !role) {kmm
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !password ||
+    !confirmPassword ||
+    !role
+  ) {
+    kmm;
     return res.status(422).json({ error: "Fill all details" });
   }
 
   try {
-    // Check if the email already exists
     const preuser = await FilePairModel.findOne({ email });
     if (preuser) {
       return res.status(422).json({ error: "This email already exists" });
     }
 
-    // Check if password and confirm password match
     if (password !== confirmPassword) {
-      return res.status(422).json({ error: "Password and confirm password do not match" });
+      return res
+        .status(422)
+        .json({ error: "Password and confirm password do not match" });
     }
 
-    // Upload file to Cloudinary
-   
-
-    // Create new user document with Cloudinary URL
     const finalUser = new FilePairModel({
       firstName,
       lastName,
       email,
       password,
-      confirmPassword, // Store Cloudinary URL
-      role // Set role
+      confirmPassword,
+      role, // Set role
     });
 
-    // Save user to the database
     await finalUser.save();
 
-    // Respond with success message
     return res.status(200).json({ message: "User registered successfully" });
   } catch (error) {
-    // Handle registration errors
     console.error("Error registering user:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
 //user Login
-router.post("/login",async(req,res)=>{
+router.post("/login", async (req, res) => {
   console.log(req.body);
-  const{ email,password}= req.body;
-  if(!email || !password){
-    res.status(422).json({error:"fill all the datails"})
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(422).json({ error: "fill all the datails" });
   }
-   try {
-    const userValid = await FilePairModel.findOne({email:email});
-    console.log(userValid)
-     if (userValid){
-      const isMatch = await bcrypt.compare(password,userValid.password);
-      if(!isMatch){
-        res.status(422).json({error:"invalid details"})
-
-      }
-      else{
+  try {
+    const userValid = await FilePairModel.findOne({ email: email });
+    console.log(userValid);
+    if (userValid) {
+      const isMatch = await bcrypt.compare(password, userValid.password);
+      if (!isMatch) {
+        res.status(422).json({ error: "invalid details" });
+      } else {
         // token generate
         const token = await userValid.generateAuthtoken();
-        
-        console.log("token",token);
+
+        console.log("token", token);
         // cookiegenerate
-        res.cookie("usercookie",token,{
-          expires:new Date(Date.now()+9000000),
-          httpOnly:true
+        res.cookie("usercookie", token, {
+          expires: new Date(Date.now() + 9000000),
+          httpOnly: true,
         });
         const result = {
           userValid,
-          token
-        }
-        res.status(201).json({status:201,result})
+          token,
+        };
+        res.status(201).json({ status: 201, result });
       }
-     }
-   } catch (error) {
-    res.status(422).json(error)
-    
-   }
- });
+    }
+  } catch (error) {
+    res.status(422).json(error);
+  }
+});
 
- // user valid
- router.get("/validuser",authenticate,async(req,res)=>{
- try{
-  const validUserOne = await FilePairModel.findOne({_id:req.userId});
-  res.status(201).json({status:201,validUserOne});
- } catch (error){
-  res.status(401).json({status:401,error});
-
- }
-
- })
-
+// user valid
+router.get("/validuser", authenticate, async (req, res) => {
+  try {
+    const validUserOne = await FilePairModel.findOne({ _id: req.userId });
+    res.status(201).json({ status: 201, validUserOne });
+  } catch (error) {
+    res.status(401).json({ status: 401, error });
+  }
+});
 
 module.exports = router;
