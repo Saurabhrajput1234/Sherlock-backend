@@ -66,7 +66,6 @@ router.post(
       } else {
         console.log ("require");
       }
-       // If 'entity' field exists, save its value
        if (entity) {
         filePairData.entity = entity;
       } else {
@@ -244,7 +243,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// user valid
+// user validation
 router.get("/validuser", authenticate, async (req, res) => {
   try {
     const validUserOne = await FilePairModel.findOne({ _id: req.userId });
@@ -256,63 +255,105 @@ router.get("/validuser", authenticate, async (req, res) => {
 
 
 
-// router.get("/finduser/:email", async (req, res) => {
-//   const email = req.params.email;
+router.get("/finduser/:email", async (req, res) => {
+  const email = req.params.email;
 
-//   try {
-//     const user = await FilePairModel.findOne({ email: email });
-//     if (!user) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
+  try {
+    const user = await FilePairModel.findOne({ email: email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-//     res.status(200).json({ user });
-//   } catch (error) {
-//     console.error("Error:", error);
-//     return res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
-// router.post("/addsharedfile", async (req, res) => {
-//   try {
-//     console.log(req.body); // Log the request body to check the received data
-    
-//     const { email, sharedFileName } = req.body;
 
-//     // Check if the email and shared file name are provided
-//     if (!email || !sharedFileName) {
-//       return res.status(422).json({ error: "Email and shared file name are required" });
-//     }
 
-//     // Find the user by email
-//     const user = await FilePairModel.findOne({ email });
-//     if (!user) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
+// Endpoint for storing files shareFile
+router.post(
+  "/shareFile",
+  upload.fields([{ name: "file" }, { name: "resultdata" },{ name: "sharedFile" }]), 
+  async (req, res) => {
+    const { entity, status, filePairId, email } = req.body; 
+    const files = req.files; // Uploaded files
 
-//     // Create file pair data
-//     const filePairData = {
-//       entity: null, // You can set this as per your requirements
-//       inputFile: null, // Initially, inputFile is null
-//       resultdata: null, // Initially, resultdata is null
-//       status: null, // Initially, status is null
-//       sharedFile: sharedFileName // Set the shared file name
-//     };
+    try {
+      
+      if (!files["file"] && !entity && !files["resultdata"] && !files["sharedFile"]) {
+        return res.status(422).json({ error: "Fill at least one field" });
+      }
 
-//     // Create a new file pair
-//     const filePair = user.filePairs.create(filePairData);
+      let filePairData = {}; 
 
-//     // Push the new file pair to the user's filePairs array
-//     user.filePairs.push(filePair);
+      
+      if (files["file"]) {
+        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+          files["file"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.inputFile = cloudinaryFileResponse.secure_url; 
+      } else {
+        filePairData.inputFile = null;
+      }
+      if (files["sharedFile"]) {
+        const cloudinaryFileResponse = await cloudinary.uploader.upload(
+          files["sharedFile"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.sharedFile = cloudinaryFileResponse.secure_url; 
+      } else {
+        filePairData.sharedFile = null;
+      }
 
-//     // Save the updated user document
-//     await user.save();
+      if (files["resultdata"]) {
+        const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; 
+      } else {
+        filePairData.resultdata = null; 
+      }
 
-//     res.status(200).json({ message: "Shared file added successfully", filePairId: filePair._id });
-//   } catch (error) {
-//     console.error("Error:", error);
-//     return res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+      
+      if (filePairId) {
+        filePairData.filePairId = filePairId;
+      } else {
+        console.log("File Pair ID is required");
+      }
+
+      
+      filePairData.entity = entity || null;
+      filePairData.status = status || null;
+
+      
+      const user = await FilePairModel.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Create a new file pair using filePairData
+      const filePair = user.filePairs.create(filePairData);
+
+      // Push the new file pair data to the user's filePairs array
+      user.filePairs.push(filePairData);
+      
+      // Save the updated user document
+      await user.save();
+
+      
+      res.status(200).json({ message: "File pair saved successfully", filePair: filePair });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 
 
 module.exports = router;
