@@ -190,7 +190,7 @@ router.post("/register", async (req, res) => {
     !confirmPassword ||
     !role
   ) {
-    kmm;
+  
     return res.status(422).json({ error: "Fill all details" });
   }
 
