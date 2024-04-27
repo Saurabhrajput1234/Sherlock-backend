@@ -7,7 +7,7 @@ const keysecret = "mynameissaurabhrajputifyouhaveanytyuplkbhkhbkbkjbkknkjjkbjk";
 
 // Define schema for the file pair
 const filePairSchema = new mongoose.Schema({
-  filePairId: { type: String, required: false, unique: true },
+  filePairId: { type: String, required: false},
   entity: { type: String, required: false },
   inputFile: { type: String, required: false },
   resultdata: { type: String, required: false },
