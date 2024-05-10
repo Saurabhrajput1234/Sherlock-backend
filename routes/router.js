@@ -5,17 +5,16 @@ const authenticate = require("../middleware/authenticate");
 const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
+const SharedFilePairModel = require("../models/userSchema");
 
-// Configure Cloudinary with your credentials
+
+
+// Configure Cloudinary with yo
 cloudinary.config({
   cloud_name: "dcnblai32",
   api_key: "322754248918634",
   api_secret: "hPd5b4MA8UToPXSpFgZ4BUAFYcc",
 });
-
-
-
-
 
 
 
@@ -33,7 +32,7 @@ router.post("/register", async (req, res) => {
     !confirmPassword ||
     !role
   ) {
-    kmm;
+    
     return res.status(422).json({ error: "Fill all details" });
   }
 
@@ -152,6 +151,7 @@ router.post(
           { resource_type: "raw" }
         );
         filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
+        filePairData.inputFiles = cloudinaryFileResponse.secure_url;
       } else {
         filePairData.inputFile = null;
       }
@@ -214,8 +214,6 @@ router.post(
 
 
 
-
-//update filepair data
 router.post(
   "/update/filepair/:filePairId",
   upload.fields([{ name: "inputFile" }, { name: "resultdata" },{ name: "sharedFile" }]),
@@ -251,6 +249,10 @@ router.post(
       if (sharedFileEmail) {
         filePair.sharedFileEmailsData.push(sharedFileEmail); 
       }
+
+      if (sharedFileEmail) {
+        filePair.sharedFileEmailsData.push(sharedFileEmail); 
+      }
       
       // Handle file uploads if provided
       if (files["inputFile"]) {
@@ -258,7 +260,7 @@ router.post(
           files["inputFile"][0].path,
           { resource_type: "raw" }
         );
-        filePair.inputFile = cloudinaryResponse.secure_url;
+        filePair.inputFiles.push(cloudinaryResponse.secure_url);
       }
 
       if (files["sharedFile"]) {
@@ -288,145 +290,57 @@ router.post(
 );
 
 
-
-
-
-// find user by email
-
-router.get("/finduser/:email", async (req, res) => {
-  const email = req.params.email;
-
+// Route for sharing a file pair
+router.post("/share-file-pair", async (req, res) => {
   try {
-    const user = await FilePairModel.findOne({ email: email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    // Extract the necessary data from the request body
+    const { filePairId, sharedFrom, sharedTo } = req.body;
+    console.log(filePairId)
+    console.log(sharedFrom)
+    console.log(sharedTo)
+
+    // Find the sender in the database
+    const sender = await FilePairModel.findById(sharedFrom);
+    if (!sender) {
+      return res.status(404).send("Sender not found.");
     }
 
-    res.status(200).json({ user });
+    // Create a new shared file pair instance
+    const sharedFilePair = {
+      filePairId,
+      sharedFrom,
+      sharedTo,
+    };
+
+    // Add the shared file pair to the sender's sharedFilePairs array
+    sender.sharedFilePairs.push(sharedFilePair);
+    await sender.save();
+
+    // Find the receiver in the database
+    const receiver = await FilePairModel.findById(sharedTo);
+    if (!receiver) {
+      return res.status(404).send("Receiver not found.");
+    }
+
+    // Retrieve the shared file pair object from the sender's filePairs array
+    const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
+    if (!filePair) {
+      return res.status(404).send("File pair not found.");
+    }
+
+    // Add the shared file pair to the receiver's filePairs array if it doesn't already exist
+    if (!receiver.filePairs.some(pair => pair.filePairId === filePairId)) {
+      receiver.filePairs.push(filePair);
+    }
+
+    await receiver.save();
+
+    res.status(201).send("File pair shared successfully.");
   } catch (error) {
     console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).send("Internal server error");
   }
 });
-
-
-
-
-
-
-
-
-// Endpoint for storing files shareFile
-router.post(
-  "/shareFile",
-  upload.fields([{ name: "file" }, { name: "resultdata" }, { name: "sharedFile" }]), 
-  async (req, res) => {
-    const { entity, status, filePairId, email, fileFromId } = req.body; 
-    const files = req.files; // Uploaded files
-
-    try {
-      
-      if (!files["file"] && !entity && !files["resultdata"] && !files["sharedFile"]) {
-        return res.status(422).json({ error: "Fill at least one field" });
-      }
-
-      let filePairData = {}; 
-
-      if (files["file"]) {
-        const cloudinaryFileResponse = await cloudinary.uploader.upload(
-          files["file"][0].path,
-          { resource_type: "raw" }
-        );
-        filePairData.inputFile = cloudinaryFileResponse.secure_url; 
-      } else {
-        filePairData.inputFile = null;
-      }
-      
-      if (files["sharedFile"]) {
-        const cloudinarySharedFileResponse = await cloudinary.uploader.upload(
-          files["sharedFile"][0].path,
-          { resource_type: "raw" }
-        );
-        filePairData.sharedFile = {
-          fileFromId: fileFromId, // Corrected to access from files["sharedFile"]
-          fileName: cloudinarySharedFileResponse.original_filename, // Store the original filename
-          fileUrl: cloudinarySharedFileResponse.secure_url // Store the secure URL
-        }; 
-      } else {
-        filePairData.sharedFile = null;
-      }
-
-      if (files["resultdata"]) {
-        const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
-          files["resultdata"][0].path,
-          { resource_type: "raw" }
-        );
-        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; 
-      } else {
-        filePairData.resultdata = null; 
-      }
-
-      if (filePairId) {
-        filePairData.filePairId = filePairId;
-      } else {
-        console.log("File Pair ID is required");
-      }
-
-      filePairData.entity = entity || null;
-      filePairData.status = status || null;
-
-      const user = await FilePairModel.findOne({ email });
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Create a new file pair using filePairData
-      const filePair = user.filePairs.create(filePairData);
-
-      // Push the new file pair data to the user's filePairs array
-      user.filePairs.push(filePairData);
-      
-      // Save the updated user document
-      await user.save();
-
-      res.status(200).json({ message: "File pair saved successfully", filePair: filePair });
-    } catch (error) {
-      console.error("Error:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
-
-
-
-// Route to delete an object based on user's role permission
-router.delete('/deleteObject/:id', authenticate, async (req, res) => {
-  try {
-    const user = req.user;
-
-    
-    if (user.role === 'police') {
-      
-      const objectId = req.params.id;
-
-      
-      const deletedObject = await FilePairModel.findByIdAndDelete(objectId);
-
-      
-
-      
-      res.status(200).json({ message: 'Object deleted successfully' });
-    } else {
-      
-      res.status(403).json({ error: 'Permission denied. Only police officers can delete objects.' });
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-
 
 
 module.exports = router;

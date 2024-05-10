@@ -7,20 +7,21 @@ const keysecret = "mynameissaurabhrajputifyouhaveanytyuplkbhkhbkbkjbkknkjjkbjk";
 
 // Define schema for the file pair
 const filePairSchema = new mongoose.Schema({
-  filePairId: { type: String, required: false},
-  entity: { type: String, required: false },
-  inputFile: { type: String, required: false },
-  resultdata: { type: String, required: false },
-  status: { type: String, required: false },
-  sharedFile: { 
-    fileFromId: { type: String, required: false }, // ID of the shared file
-    fileName: { type: String, required: false },
-    fileUrl: { type: String, required: false } // Name of the shared file
-  },
-  sharedFileEmailsData: [{ type: String }]
+  filePairId: { type: String, required: true },
+  entity: { type: String, required: true },
+  inputFile: { type: String, required:true },
+  resultdata: { type: String, required: true },
+  status: { type: String, required: true }
 });
 
-// Define main schema
+// Define shared file pair schema
+const sharedFilePairSchema = new mongoose.Schema({
+  filePairId: { type: String, required: true },
+  sharedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ID of the user who shared the file pair
+  sharedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // ID of the user who received the shared file pair
+});
+
+// Define main schema for User
 const userSchema = new mongoose.Schema({
   firstName: { type: String, uppercase: true, required: true },
   lastName: { type: String, uppercase: true, required: true },
@@ -45,7 +46,8 @@ const userSchema = new mongoose.Schema({
       },
     },
   ],
-  filePairs: [filePairSchema] // Embed FilePair schema as a sub-document array
+  filePairs: [filePairSchema],
+  sharedFilePairs: [sharedFilePairSchema] // Array of shared file pairs
 });
 
 // Hash password
@@ -69,5 +71,8 @@ userSchema.methods.generateAuthtoken = async function () {
   }
 };
 
+// Create User model
 const FilePairModel = mongoose.model("userdbauth12", userSchema);
 module.exports = FilePairModel;
+
+
