@@ -6,6 +6,29 @@ const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
 const SharedFilePairModel = require("../models/userSchema");
+const { connectToMongoDB, sendSSE, connectedClients } = require('../db/mongoChangeStream');
+
+
+
+
+
+
+
+// Route for SSE events
+router.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const clientId = Date.now();
+  connectedClients.push({ id: clientId, res });
+
+  req.on('close', () => {
+    console.log(`Connection ${clientId} closed`);
+    connectedClients = connectedClients.filter(c => c.id !== clientId);
+  });
+});
 
 
 
@@ -339,6 +362,21 @@ router.post("/share-file-pair", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).send("Internal server error");
+  }
+});
+
+// Route to find a user by ID
+router.get("/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await FilePairModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

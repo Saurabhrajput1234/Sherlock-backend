@@ -17,8 +17,8 @@ const filePairSchema = new mongoose.Schema({
 // Define shared file pair schema
 const sharedFilePairSchema = new mongoose.Schema({
   filePairId: { type: String, required: true },
-  sharedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ID of the user who shared the file pair
-  sharedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // ID of the user who received the shared file pair
+  sharedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, 
+  sharedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } 
 });
 
 // Define main schema for User
@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
   },
   password: { type: String, required: true, minlength: 6 },
   confirmPassword: { type: String, required: true, minlength: 6 },
-  role: { type: String, enum: ['police', 'nopolice'] }, // Role-based authentication
+  role: { type: String, enum: ['police', 'nopolice'] }, 
   tokens: [
     {
       token: {
@@ -47,7 +47,7 @@ const userSchema = new mongoose.Schema({
     },
   ],
   filePairs: [filePairSchema],
-  sharedFilePairs: [sharedFilePairSchema] // Array of shared file pairs
+  sharedFilePairs: [sharedFilePairSchema] 
 });
 
 // Hash password
