@@ -314,36 +314,88 @@ router.post(
 
 
 // Route for sharing a file pair
+// router.post("/share-file-pair", async (req, res) => {
+//   try {
+//     // Extract the necessary data from the request body
+//     const { filePairId, sharedFrom, sharedTo } = req.body;
+//     console.log(filePairId)
+//     console.log(sharedFrom)
+//     console.log(sharedTo)
+
+//     // Find the sender in the database
+//     const sender = await FilePairModel.findById(sharedFrom);
+//     if (!sender) {
+//       return res.status(404).send("Sender not found.");
+//     }
+
+//     // Create a new shared file pair instance
+//     const sharedFilePair = {
+//       filePairId,
+//       sharedFrom,
+//       sharedTo,
+//     };
+
+//     // Add the shared file pair to the sender's sharedFilePairs array
+//     sender.sharedFilePairs.push(sharedFilePair);
+//     await sender.save();
+
+//     // Find the receiver in the database
+//     const receiver = await FilePairModel.findById(sharedTo);
+//     if (!receiver) {
+//       return res.status(404).send("Receiver not found.");
+//     }
+
+//     // Retrieve the shared file pair object from the sender's filePairs array
+//     const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
+//     if (!filePair) {
+//       return res.status(404).send("File pair not found.");
+//     }
+
+//     // Add the shared file pair to the receiver's filePairs array if it doesn't already exist
+//     if (!receiver.filePairs.some(pair => pair.filePairId === filePairId)) {
+//       receiver.filePairs.push(filePair);
+//     }
+
+//     await receiver.save();
+
+//     res.status(201).send("File pair shared successfully.");
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).send("Internal server error");
+//   }
+// });
+
+
 router.post("/share-file-pair", async (req, res) => {
   try {
     // Extract the necessary data from the request body
-    const { filePairId, sharedFrom, sharedTo } = req.body;
-    console.log(filePairId)
-    console.log(sharedFrom)
-    console.log(sharedTo)
+    const { filePairId, sharedFromEmail, sharedToEmail } = req.body;
+    console.log(filePairId);
+    console.log(sharedFromEmail);
+    console.log(sharedToEmail);
 
-    // Find the sender in the database
-    const sender = await FilePairModel.findById(sharedFrom);
+    // Find the sender in the database by email
+    const sender = await FilePairModel.findOne({ email: sharedFromEmail });
     if (!sender) {
       return res.status(404).send("Sender not found.");
+    }
+
+    // Find the receiver in the database by email
+    const receiver = await FilePairModel.findOne({ email: sharedToEmail });
+    if (!receiver) {
+      return res.status(404).send("Receiver not found.");
     }
 
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
-      sharedFrom,
-      sharedTo,
+      sharedFrom: sender._id,
+      sharedTo: receiver._id,
     };
 
     // Add the shared file pair to the sender's sharedFilePairs array
     sender.sharedFilePairs.push(sharedFilePair);
     await sender.save();
-
-    // Find the receiver in the database
-    const receiver = await FilePairModel.findById(sharedTo);
-    if (!receiver) {
-      return res.status(404).send("Receiver not found.");
-    }
 
     // Retrieve the shared file pair object from the sender's filePairs array
     const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
@@ -364,6 +416,7 @@ router.post("/share-file-pair", async (req, res) => {
     res.status(500).send("Internal server error");
   }
 });
+
 
 // Route to find a user by ID
 router.get("/:userId", async (req, res) => {
