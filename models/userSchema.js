@@ -7,11 +7,12 @@ const keysecret = "mynameissaurabhrajputifyouhaveanytyuplkbhkhbkbkjbkknkjjkbjk";
 
 // Define schema for the file pair
 const filePairSchema = new mongoose.Schema({
-  filePairId: { type: String, required: true },
-  entity: { type: String, required: true },
-  inputFile: { type: String, required:true },
-  resultdata: { type: String, required: true },
-  status: { type: String, required: true }
+  filePairId: { type: String, required: false },
+  entity: { type: String, required: false},
+  inputFile: { type: String, required:false },
+  resultdata: { type: String, required: false },
+  status: { type: String, required: false },
+  sharedFileEmailsData: [{ type: String }]
 });
 
 // Define shared file pair schema

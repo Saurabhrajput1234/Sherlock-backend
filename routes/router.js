@@ -271,9 +271,6 @@ router.post(
         filePair.sharedFileEmailsData.push(sharedFileEmail); 
       }
 
-      if (sharedFileEmail) {
-        filePair.sharedFileEmailsData.push(sharedFileEmail); 
-      }
       
       // Handle file uploads if provided
       if (files["inputFile"]) {
@@ -333,6 +330,12 @@ router.post("/share-file-pair", async (req, res) => {
       return res.status(404).send("Receiver not found.");
     }
 
+    // Retrieve the shared file pair object from the sender's filePairs array
+    const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
+    if (!filePair) {
+      return res.status(404).send("File pair not found.");
+    }
+
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
@@ -341,16 +344,13 @@ router.post("/share-file-pair", async (req, res) => {
     };
 
     // Add the shared file pair to the sender's sharedFilePairs array
-    sender.sharedFilePairs.push(sharedFilePair);
-    await sender.save();
+    // sender.sharedFilePairs.push(sharedFilePair);
+    // await sender.save();
 
-    // Retrieve the shared file pair object from the sender's filePairs array
-    const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
-    if (!filePair) {
-      return res.status(404).send("File pair not found.");
-    }
+    // Add the shared file pair to the receiver's sharedFilePairs array
+    receiver.sharedFilePairs.push(sharedFilePair);
 
-    // Add the shared file pair to the receiver's filePairs array if it doesn't already exist
+    // Add the file pair to the receiver's filePairs array if it doesn't already exist
     if (!receiver.filePairs.some(pair => pair.filePairId === filePairId)) {
       receiver.filePairs.push(filePair);
     }
@@ -363,7 +363,6 @@ router.post("/share-file-pair", async (req, res) => {
     res.status(500).send("Internal server error");
   }
 });
-
 
 // Route to find a user by ID
 router.get("/:userId", async (req, res) => {
