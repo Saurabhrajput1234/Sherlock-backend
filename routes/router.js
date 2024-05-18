@@ -5,8 +5,6 @@ const authenticate = require("../middleware/authenticate");
 const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
-const SharedFilePairModel = require("../models/userSchema");
-const { connectToMongoDB, sendSSE, connectedClients } = require('../db/mongoChangeStream');
 
 
 
@@ -14,21 +12,21 @@ const { connectToMongoDB, sendSSE, connectedClients } = require('../db/mongoChan
 
 
 
-// Route for SSE events
-router.get('/events', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
+// // Route for SSE events
+// router.get('/events', (req, res) => {
+//   res.setHeader('Content-Type', 'text/event-stream');
+//   res.setHeader('Cache-Control', 'no-cache');
+//   res.setHeader('Connection', 'keep-alive');
+//   res.flushHeaders();
 
-  const clientId = Date.now();
-  connectedClients.push({ id: clientId, res });
+//   const clientId = Date.now();
+//   connectedClients.push({ id: clientId, res });
 
-  req.on('close', () => {
-    console.log(`Connection ${clientId} closed`);
-    connectedClients = connectedClients.filter(c => c.id !== clientId);
-  });
-});
+//   req.on('close', () => {
+//     console.log(`Connection ${clientId} closed`);
+//     connectedClients = connectedClients.filter(c => c.id !== clientId);
+//   });
+// });
 
 
 
@@ -313,57 +311,6 @@ router.post(
 );
 
 
-// Route for sharing a file pair
-// router.post("/share-file-pair", async (req, res) => {
-//   try {
-//     // Extract the necessary data from the request body
-//     const { filePairId, sharedFrom, sharedTo } = req.body;
-//     console.log(filePairId)
-//     console.log(sharedFrom)
-//     console.log(sharedTo)
-
-//     // Find the sender in the database
-//     const sender = await FilePairModel.findById(sharedFrom);
-//     if (!sender) {
-//       return res.status(404).send("Sender not found.");
-//     }
-
-//     // Create a new shared file pair instance
-//     const sharedFilePair = {
-//       filePairId,
-//       sharedFrom,
-//       sharedTo,
-//     };
-
-//     // Add the shared file pair to the sender's sharedFilePairs array
-//     sender.sharedFilePairs.push(sharedFilePair);
-//     await sender.save();
-
-//     // Find the receiver in the database
-//     const receiver = await FilePairModel.findById(sharedTo);
-//     if (!receiver) {
-//       return res.status(404).send("Receiver not found.");
-//     }
-
-//     // Retrieve the shared file pair object from the sender's filePairs array
-//     const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
-//     if (!filePair) {
-//       return res.status(404).send("File pair not found.");
-//     }
-
-//     // Add the shared file pair to the receiver's filePairs array if it doesn't already exist
-//     if (!receiver.filePairs.some(pair => pair.filePairId === filePairId)) {
-//       receiver.filePairs.push(filePair);
-//     }
-
-//     await receiver.save();
-
-//     res.status(201).send("File pair shared successfully.");
-//   } catch (error) {
-//     console.error("Error:", error);
-//     res.status(500).send("Internal server error");
-//   }
-// });
 
 
 router.post("/share-file-pair", async (req, res) => {

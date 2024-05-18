@@ -12,10 +12,10 @@ app.use(cors());
 app.use(cookieParser());
 app.use(router);
 
-const { connectToMongoDB } = require('./db/mongoChangeStream');
+// const { connectToMongoDB } = require('./db/mongoChangeStream');
 
-// Start MongoDB change stream and SSE logic
-connectToMongoDB();
+// // Start MongoDB change stream and SSE logic
+// connectToMongoDB();
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
