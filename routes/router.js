@@ -211,11 +211,16 @@ router.post("/update/filepair/:filePairId",
     const files = req.files;
 
     try {
-      if (!filePairId) {
-        return res.status(422).json({ error: "File Pair ID is required" });
-      }
+     // Validate filePairId
+     if (!mongoose.Types.ObjectId.isValid(filePairId)) {
+      return res.status(400).json({ error: "Invalid File Pair ID" });
+    }
 
-      const users = await FilePairModel.find({ "filePairs.filePairId": filePairId });
+    // Convert filePairId to ObjectId
+    const objectIdFilePairId = mongoose.Types.ObjectId(filePairId);
+
+    // Find users with the specific filePairId
+    const users = await FilePairModel.find({ "filePairs.filePairId": objectIdFilePairId });
       if (!users.length) {
         return res.status(404).json({ error: "File pair not found" });
       }
