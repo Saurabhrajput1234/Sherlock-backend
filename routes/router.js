@@ -211,16 +211,11 @@ router.post("/update/filepair/:filePairId",
     const files = req.files;
 
     try {
-     // Validate filePairId
-     if (!mongoose.Types.ObjectId.isValid(filePairId)) {
-      return res.status(400).json({ error: "Invalid File Pair ID" });
-    }
+      if (!filePairId) {
+        return res.status(422).json({ error: "File Pair ID is required" });
+      }
 
-    // Convert filePairId to ObjectId
-    const objectIdFilePairId = mongoose.Types.ObjectId(filePairId);
-
-    // Find users with the specific filePairId
-    const users = await FilePairModel.find({ "filePairs.filePairId": objectIdFilePairId });
+      const users = await FilePairModel.find({ "filePairs.filePairId": filePairId });
       if (!users.length) {
         return res.status(404).json({ error: "File pair not found" });
       }
@@ -306,8 +301,8 @@ router.post("/share-file-pair", async (req, res) => {
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
-      sharedFrom: sender.email,
-      sharedTo: receiver.email,
+      sharedFrom: sender._id,
+      sharedTo: receiver._id,
     };
 
     // Add the shared file pair to the sender's sharedFilePairs array
