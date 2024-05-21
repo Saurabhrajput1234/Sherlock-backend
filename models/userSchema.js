@@ -19,8 +19,8 @@ const filePairSchema = new mongoose.Schema({
 // Define shared file pair schema
 const sharedFilePairSchema = new mongoose.Schema({
   filePairId: { type: String, required: true },
-  sharedFromEmail: { type:String, ref: 'User' }, 
-  sharedToEmail: { type: String, ref: 'User' } ,
+  sharedFromEmail: { type:String,  }, 
+  sharedToEmail: { type: String,  } ,
   sharedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, 
   sharedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } 
 });
