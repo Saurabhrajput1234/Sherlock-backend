@@ -11,7 +11,8 @@ const filePairSchema = new mongoose.Schema({
   entity: { type: String, required: false},
   inputFile: { type: String, required:false },
   resultdata: { type: String, required: false },
-  status: { type: String, required: false },
+  report: { type: String, required: false },
+ status: { type: String, required: false },
   sharedFileEmailsData: [{ type: String }]
 });
 

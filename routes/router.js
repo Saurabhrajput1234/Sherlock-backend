@@ -6,12 +6,6 @@ const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
 
-
-
-
-
-
-
 // // Route for SSE events
 // router.get('/events', (req, res) => {
 //   res.setHeader('Content-Type', 'text/event-stream');
@@ -28,16 +22,12 @@ const upload = require("../middleware/upload");
 //   });
 // });
 
-
-
 // Configure Cloudinary with yo
 cloudinary.config({
   cloud_name: "dcnblai32",
   api_key: "322754248918634",
   api_secret: "hPd5b4MA8UToPXSpFgZ4BUAFYcc",
 });
-
-
 
 // authentication
 
@@ -53,7 +43,6 @@ router.post("/register", async (req, res) => {
     !confirmPassword ||
     !role
   ) {
-    
     return res.status(422).json({ error: "Fill all details" });
   }
 
@@ -86,9 +75,6 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
-
 
 //user Login
 router.post("/login", async (req, res) => {
@@ -126,41 +112,28 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
-
-
-
-
 // user validation
 router.get("/validuser", authenticate, async (req, res) => {
-  console.log("hellll",req.userId );
+  console.log("hellll", req.userId);
   try {
     const validUserOne = await FilePairModel.findOne({ _id: req.userId });
     res.status(201).json({ status: 201, validUserOne });
-    console.log("hellll",validUserOne);
+    console.log("hellll", validUserOne);
   } catch (error) {
     res.status(401).json({ status: 401, error });
   }
 });
 
-
-
-
-
-
-
 //routes for storing filepair data
-router.post(
-  "/filedata",
-  authenticate,
-  upload.fields([{ name: "file" }, { name: "resultdata" }]),
+router.post("/filedata",authenticate,
+  upload.fields([{ name: "file" }, { name: "resultdata" },{ name: "report" }]),
   async (req, res) => {
-    const { entity, status ,filePairId,sharedFileEmailsData} = req.body;
+    const { entity, status, filePairId, sharedFileEmailsData } = req.body;
     const files = req.files;
     const userId = req.userId;
 
     try {
-      if (!files["file"] && !entity && !files["resultdata"]) {
+      if (!files["file"] && !entity && !files["resultdata"] ) {
         return res.status(422).json({ error: "Fill at least one field" });
       }
 
@@ -172,10 +145,7 @@ router.post(
           { resource_type: "raw" }
         );
         filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
-        filePairData.inputFiles = cloudinaryFileResponse.secure_url;
-      } else {
-        filePairData.inputFile = null;
-      }
+      } 
 
       if (files["resultdata"]) {
         const cloudinaryResultDataResponse = await cloudinary.uploader.upload(
@@ -183,46 +153,45 @@ router.post(
           { resource_type: "raw" }
         );
         filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
-      } else {
-        filePairData.resultdata = null; 
-      }
+      } 
 
-     
+
+      if (files["report"]) {
+        const cloudinaryReportDataResponse = await cloudinary.uploader.upload(
+          files["resultdata"][0].path,
+          { resource_type: "raw" }
+        );
+        filePairData.report = cloudinaryReportDataResponse.secure_url; // Save resultdata URL
+      } 
+
       if (filePairId) {
         filePairData.filePairId = filePairId;
       } else {
-        console.log ("require");
+        console.log("require");
       }
-       if (entity) {
+      if (entity) {
         filePairData.entity = entity;
-      } else {
-        filePairData.entity = null;
-      }
+      } 
       if (sharedFileEmailsData) {
         filePairData.sharedFileEmailsData = sharedFileEmailsData;
-      } else {
-        filePairData.sharedFileEmailsData = null;
-      }
+      } 
       if (status) {
         filePairData.status = status;
-      } else {
-        filePairData.status = null;
-      }
+      } 
 
       const user = await FilePairModel.findById(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      
       const filePair = user.filePairs.create(filePairData);
 
       user.filePairs.push(filePairData);
       await user.save();
-      
-      
 
-      res.status(200).json({ message: "File pair saved successfully" ,filePair: filePair });
+      res
+        .status(200)
+        .json({ message: "File pair saved successfully", filePair: filePair });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ error: "Internal server error" });
@@ -230,85 +199,76 @@ router.post(
   }
 );
 
-
-
-
-
-
-router.post(
-  "/update/filepair/:filePairId",
-  upload.fields([{ name: "inputFile" }, { name: "resultdata" },{ name: "sharedFile" }]),
+router.post("/update/filepair/:filePairId",
+  upload.fields([
+    { name: "inputFile" },
+    { name: "resultdata" },
+    { name: "report" },
+  ]),
   async (req, res) => {
-    const filePairId = req.params.filePairId; 
-    const { entity, status,sharedFileEmail } = req.body;
+    const filePairId = req.params.filePairId;
+    const { entity, status, sharedFileEmail } = req.body;
     const files = req.files;
-    
+
     try {
       if (!filePairId) {
         return res.status(422).json({ error: "File Pair ID is required" });
       }
 
-      const user = await FilePairModel.findOne({ "filePairs.filePairId": filePairId });
-      if (!user) {
+      const users = await FilePairModel.find({ "filePairs.filePairId": filePairId });
+      if (!users.length) {
         return res.status(404).json({ error: "File pair not found" });
       }
 
-      // Find the file pair within the user's filePairs array
-      const filePair = user.filePairs.find(pair => pair.filePairId === filePairId);
-      if (!filePair) {
-        return res.status(404).json({ error: "File pair not found" });
+      let updatedFilePairs = [];
+
+      // Iterate through all users containing the matching file pair
+      for (const user of users) {
+        // Find the file pair within the user's filePairs array
+        const filePair = user.filePairs.find(pair => pair.filePairId === filePairId);
+        if (filePair) {
+          // Update entity and status if provided
+          if (entity) filePair.entity = entity;
+          if (status) filePair.status = status;
+          if (sharedFileEmail) {
+            if (!Array.isArray(filePair.sharedFileEmailsData)) {
+              filePair.sharedFileEmailsData = [];
+            }
+            filePair.sharedFileEmailsData.push(sharedFileEmail);
+          }
+
+          // Handle file uploads if provided
+          if (files) {
+            if (files["inputFile"]) {
+              const cloudinaryResponse = await cloudinary.uploader.upload(files["inputFile"][0].path,{ resource_type: "raw" });
+              filePair.inputFile = cloudinaryResponse.secure_url;
+            }
+
+            if (files["report"]) {
+              const cloudinaryResponse = await cloudinary.uploader.upload(files["report"][0].path, { resource_type: "raw" });
+              filePair.report = cloudinaryResponse.secure_url;
+            }
+
+            if (files["resultdata"]) {
+              const cloudinaryResponse = await cloudinary.uploader.upload(files["resultdata"][0].path, { resource_type: "raw" });
+              filePair.resultdata = cloudinaryResponse.secure_url;
+            }
+          }
+
+          // Save the updated user
+          await user.save();
+
+          updatedFilePairs.push(filePair);
+        }
       }
 
-      // Update entity and status if provided
-      if (entity) {
-        filePair.entity = entity;
-      }
-      if (status) {
-        filePair.status = status;
-      }
-
-      if (sharedFileEmail) {
-        filePair.sharedFileEmailsData.push(sharedFileEmail); 
-      }
-
-      
-      // Handle file uploads if provided
-      if (files["inputFile"]) {
-        const cloudinaryResponse = await cloudinary.uploader.upload(
-          files["inputFile"][0].path,
-          { resource_type: "raw" }
-        );
-        filePair.inputFiles.push(cloudinaryResponse.secure_url);
-      }
-
-      if (files["sharedFile"]) {
-        const cloudinaryResponse = await cloudinary.uploader.upload(
-          files["sharedFile"][0].path,
-          { resource_type: "raw" }
-        );
-        filePair.sharedFile = cloudinaryResponse.secure_url;
-      }
-      if (files["resultdata"]) {
-        const cloudinaryResponse = await cloudinary.uploader.upload(
-          files["resultdata"][0].path,
-          { resource_type: "raw" }
-        );
-        filePair.resultdata = cloudinaryResponse.secure_url;
-      }
-
-  
-      await user.save();
-
-      return res.status(200).json({ success: true, updatedData: filePair });
+      return res.status(200).json({ success: true, message: "File pairs updated successfully", updatedData: updatedFilePairs });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
 );
-
-
-
 
 router.post("/share-file-pair", async (req, res) => {
   try {
@@ -331,7 +291,9 @@ router.post("/share-file-pair", async (req, res) => {
     }
 
     // Retrieve the shared file pair object from the sender's filePairs array
-    const filePair = sender.filePairs.find(pair => pair.filePairId === filePairId);
+    const filePair = sender.filePairs.find(
+      (pair) => pair.filePairId === filePairId
+    );
     if (!filePair) {
       return res.status(404).send("File pair not found.");
     }
@@ -339,8 +301,8 @@ router.post("/share-file-pair", async (req, res) => {
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
-      sharedFrom: sender._id,
-      sharedTo: receiver._id,
+      sharedFrom: sender.email,
+      sharedTo: receiver.email,
     };
 
     // Add the shared file pair to the sender's sharedFilePairs array
@@ -351,7 +313,7 @@ router.post("/share-file-pair", async (req, res) => {
     receiver.sharedFilePairs.push(sharedFilePair);
 
     // Add the file pair to the receiver's filePairs array if it doesn't already exist
-    if (!receiver.filePairs.some(pair => pair.filePairId === filePairId)) {
+    if (!receiver.filePairs.some((pair) => pair.filePairId === filePairId)) {
       receiver.filePairs.push(filePair);
     }
 
@@ -378,6 +340,5 @@ router.get("/:userId", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 module.exports = router;
