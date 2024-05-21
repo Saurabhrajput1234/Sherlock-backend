@@ -301,10 +301,11 @@ router.post("/share-file-pair", async (req, res) => {
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
+      sharedFrom : sender._id,
+      sharedTo : receiver._id,
       sharedFromEmail: sender.email,
       sharedToEmail: receiver.email,
-      sharedFrom:sender._id,
-      sharedTo: receiver._id
+      
       
     };
 
