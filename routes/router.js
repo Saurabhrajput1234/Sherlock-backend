@@ -301,8 +301,8 @@ router.post("/share-file-pair", async (req, res) => {
     // Create a new shared file pair instance
     const sharedFilePair = {
       filePairId,
-      sharedFrom: sender._id,
-      sharedTo: receiver._id,
+      sharedFrom: sender.email,
+      sharedTo: receiver.email,
     };
 
     // Add the shared file pair to the sender's sharedFilePairs array
