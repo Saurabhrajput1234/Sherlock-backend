@@ -1,12 +1,46 @@
 const express = require("express");
 const router = express.Router();
 const FilePairModel = require("../models/userSchema");
+require('dotenv').config();
 const authenticate = require("../middleware/authenticate");
 const cloudinary = require("cloudinary").v2;
 const bcrypt = require("bcryptjs");
 const upload = require("../middleware/upload");
+const crypto = require('crypto');
+const algorithm = 'aes-256-cbc';
+const key = Buffer.from('c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2', 'hex');
+const iv = Buffer.from('a1b2c3d4e5f60789a1b2c3d4e5f60789', 'hex');
 
-// // Route for SSE events
+
+
+
+// encription function
+function encrypt(text) {
+  let cipher = crypto.createCipheriv(algorithm, key, iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+// Decryption function
+function decrypt(text) {
+  let textParts = text.split(':');
+  let iv = Buffer.from(textParts.shift(), 'hex');
+  let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+  
+  // Ensure IV length and content match the expected IV
+  if (iv.length !== 16) {
+    throw new Error('Invalid initialization vector');
+  }
+
+  let decipher = crypto.createDecipheriv(algorithm, key, iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+}
+
+
+// //  Route for SSE events
 // router.get('/events', (req, res) => {
 //   res.setHeader('Content-Type', 'text/event-stream');
 //   res.setHeader('Cache-Control', 'no-cache');
@@ -22,7 +56,17 @@ const upload = require("../middleware/upload");
 //   });
 // });
 
-// Configure Cloudinary with yo
+
+
+
+
+
+
+//cloudinary keys
+
+
+
+
 cloudinary.config({
   cloud_name: "dcnblai32",
   api_key: "322754248918634",
@@ -30,6 +74,8 @@ cloudinary.config({
 });
 
 // authentication
+
+
 
 router.post("/register", async (req, res) => {
   const { firstName, lastName, email, password, confirmPassword, role } =
@@ -76,6 +122,9 @@ router.post("/register", async (req, res) => {
   }
 });
 
+
+
+
 //user Login
 router.post("/login", async (req, res) => {
   console.log(req.body);
@@ -112,17 +161,42 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
+
 // user validation
 router.get("/validuser", authenticate, async (req, res) => {
-  console.log("hellll", req.userId);
+  
   try {
     const validUserOne = await FilePairModel.findOne({ _id: req.userId });
-    res.status(201).json({ status: 201, validUserOne });
-    console.log("hellll", validUserOne);
+    console.log("gaurav",validUserOne);
+
+    // Check if user was found
+    if (!validUserOne) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Decrypt the URLs in filePairs
+    if (validUserOne.filePairs) {
+      validUserOne.filePairs = validUserOne.filePairs.map(filePair => {
+        return {
+          ...filePair._doc,
+          inputFile: filePair.inputFile ? decrypt(filePair.inputFile) : null,
+          resultdata: filePair.resultdata ? decrypt(filePair.resultdata) : null,
+          report: filePair.report ? decrypt(filePair.report) : null,
+        };
+      });
+    }
+
+    console.log("saurabh",validUserOne);
+
+    res.status(200).json({ status: 200, validUserOne });
   } catch (error) {
-    res.status(401).json({ status: 401, error });
+    console.error("Error fetching valid user:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 //routes for storing filepair data
 router.post("/filedata",authenticate,
@@ -144,7 +218,7 @@ router.post("/filedata",authenticate,
           files["file"][0].path,
           { resource_type: "raw" }
         );
-        filePairData.inputFile = cloudinaryFileResponse.secure_url; // Save file URL
+        filePairData.inputFile = encrypt(cloudinaryFileResponse.secure_url); // Save file URL
       } 
 
       if (files["resultdata"]) {
@@ -152,7 +226,7 @@ router.post("/filedata",authenticate,
           files["resultdata"][0].path,
           { resource_type: "raw" }
         );
-        filePairData.resultdata = cloudinaryResultDataResponse.secure_url; // Save resultdata URL
+        filePairData.resultdata =  encrypt(cloudinaryResultDataResponse.secure_url); // Save resultdata URL
       } 
 
 
@@ -161,7 +235,7 @@ router.post("/filedata",authenticate,
           files["resultdata"][0].path,
           { resource_type: "raw" }
         );
-        filePairData.report = cloudinaryReportDataResponse.secure_url; // Save resultdata URL
+        filePairData.report = encrypt(cloudinaryReportDataResponse.secure_url); // Save resultdata URL
       } 
 
       if (filePairId) {
@@ -198,6 +272,8 @@ router.post("/filedata",authenticate,
     }
   }
 );
+
+
 
 router.post("/update/filepair/:filePairId",
   upload.fields([
@@ -270,6 +346,11 @@ router.post("/update/filepair/:filePairId",
   }
 );
 
+
+
+
+
+
 router.post("/share-file-pair", async (req, res) => {
   try {
     // Extract the necessary data from the request body
@@ -330,6 +411,11 @@ router.post("/share-file-pair", async (req, res) => {
   }
 });
 
+
+
+
+
+
 // Route to find a user by ID
 router.get("/:userId", async (req, res) => {
   try {
@@ -338,11 +424,29 @@ router.get("/:userId", async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+    
+
+    // Decrypt the URLs in filePairs
+    if (user.filePairs) {
+      user.filePairs = user.filePairs.map(filePair => {
+        return {
+          ...filePair._doc,
+          inputFile: filePair.inputFile ? decrypt(filePair.inputFile) : null,
+          resultdata: filePair.resultdata ? decrypt(filePair.resultdata) : null,
+          report: filePair.report ? decrypt(filePair.report) : null,
+        };
+      });
+    }
+
+
+
     res.status(200).json({ user });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 module.exports = router;
