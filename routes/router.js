@@ -321,17 +321,17 @@ router.post("/update/filepair/:filePairId",
           if (files) {
             if (files["inputFile"]) {
               const cloudinaryResponse = await cloudinary.uploader.upload(files["inputFile"][0].path,{ resource_type: "raw" });
-              filePair.inputFile = cloudinaryResponse.secure_url;
+              filePair.inputFile = encrypt(cloudinaryResponse.secure_url);
             }
 
             if (files["report"]) {
               const cloudinaryResponse = await cloudinary.uploader.upload(files["report"][0].path, { resource_type: "raw" });
-              filePair.report = cloudinaryResponse.secure_url;
+              filePair.report = encrypt(cloudinaryResponse.secure_url);
             }
 
             if (files["resultdata"]) {
               const cloudinaryResponse = await cloudinary.uploader.upload(files["resultdata"][0].path, { resource_type: "raw" });
-              filePair.resultdata = cloudinaryResponse.secure_url;
+              filePair.resultdata = encrypt(cloudinaryResponse.secure_url);
             }
           }
 
