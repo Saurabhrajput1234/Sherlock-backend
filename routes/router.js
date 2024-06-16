@@ -14,6 +14,8 @@ const iv = Buffer.from('a1b2c3d4e5f60789a1b2c3d4e5f60789', 'hex');
 
 
 
+
+
 // encription function
 function encrypt(text) {
   let cipher = crypto.createCipheriv(algorithm, key, iv);
@@ -21,6 +23,8 @@ function encrypt(text) {
   encrypted = Buffer.concat([encrypted, cipher.final()]);
   return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
+
+
 
 // Decryption function
 function decrypt(text) {
