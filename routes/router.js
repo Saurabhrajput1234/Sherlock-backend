@@ -206,7 +206,7 @@ router.get("/validuser", authenticate, async (req, res) => {
 router.post("/filedata",authenticate,
   upload.fields([{ name: "file" }, { name: "resultdata" },{ name: "report" }]),
   async (req, res) => {
-    const { entity, status, filePairId, sharedFileEmailsData } = req.body;
+    const { entity, status, filePairId, sharedFileEmailsData,date } = req.body;
     const files = req.files;
     const userId = req.userId;
 
@@ -256,6 +256,9 @@ router.post("/filedata",authenticate,
       if (status) {
         filePairData.status = status;
       } 
+      if (date) {
+        filePairData.date = date;
+      } 
 
       const user = await FilePairModel.findById(userId);
       if (!user) {
@@ -287,7 +290,7 @@ router.post("/update/filepair/:filePairId",
   ]),
   async (req, res) => {
     const filePairId = req.params.filePairId;
-    const { entity, status, sharedFileEmail } = req.body;
+    const { entity, status, sharedFileEmail,date } = req.body;
     const files = req.files;
 
     try {
@@ -310,6 +313,7 @@ router.post("/update/filepair/:filePairId",
           // Update entity and status if provided
           if (entity) filePair.entity = entity;
           if (status) filePair.status = status;
+          if (date) filePair.date = date;
           if (sharedFileEmail) {
             if (!Array.isArray(filePair.sharedFileEmailsData)) {
               filePair.sharedFileEmailsData = [];
@@ -394,9 +398,7 @@ router.post("/share-file-pair", async (req, res) => {
       
     };
 
-    // Add the shared file pair to the sender's sharedFilePairs array
-    // sender.sharedFilePairs.push(sharedFilePair);
-    // await sender.save();
+   
 
     // Add the shared file pair to the receiver's sharedFilePairs array
     receiver.sharedFilePairs.push(sharedFilePair);

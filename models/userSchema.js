@@ -13,6 +13,7 @@ const filePairSchema = new mongoose.Schema({
   resultdata: { type: String, required: false },
   report: { type: String, required: false },
  status: { type: String, required: false },
+ date:{type: String},
   sharedFileEmailsData: [{ type: String }]
 });
 
@@ -77,7 +78,7 @@ userSchema.methods.generateAuthtoken = async function () {
 };
 
 // Create User model
-const FilePairModel = mongoose.model("userdbauth12", userSchema);
+const FilePairModel = mongoose.model("sherlockUser", userSchema);
 module.exports = FilePairModel;
 
 
